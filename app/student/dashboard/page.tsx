@@ -96,20 +96,8 @@ export default function StudentDashboard() {
     return score;
   };
 
-  useEffect(() => {
-    // Fetch mentors only when a student user is present
-    let mounted = true;
-
-    async function init() {
-      if (!user?.id) return;
-      if (user.role !== "student") return;
-
-      await fetchMentors();
-    }
-
-    init();
-    return () => { mounted = false; };
-  }, [user]);
+  // We fetch mentors only when the user explicitly clicks "Match with Alumni".
+  // This avoids showing results before the student provides input.
 
   async function fetchMentors() {
     if (!user?.id) return;
@@ -233,8 +221,9 @@ export default function StudentDashboard() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <Button onClick={() => {
-                      // apply client-side scoring and sort
+                    <Button onClick={async () => {
+                      // Fetch mentors from the DB, then apply client-side scoring and sort
+                      await fetchMentors();
                       setMentors(prev => prev.map(m => ({ ...m, matchScore: computeMatchScore(m) })).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)));
                     }} className="flex-1">Match with Alumni</Button>
 
