@@ -33,6 +33,7 @@ export interface User {
   name?: string | null;
   role?: "student" | "mentor" | null;
   availability?: boolean | null;
+  profile_completed?: boolean | null;
 }
 
 interface AuthContextType {
@@ -92,29 +93,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function fetchAndSetProfile(userId: string) {
     // Fetch profile from Supabase
     // Fetch profile without assuming an 'email' column exists on profiles
-  let { data, error } = await supabase
-    .from("profiles")
-    .select("id, name, role, availability")
-    .eq("id", userId)
-    .single();
+  // Attempt to read the likely profile columns. If the column is missing, we retry with a smaller select to stay resilient.
+  let selectCols = "id, name, full_name, role, availability, profile_completed";
+  let { data, error } = await supabase.from("profiles").select(selectCols).eq("id", userId).single();
 
-  // If availability column is missing, retry without it
   if (error) {
     const msg = (error as any).message || "";
-    if (msg.toLowerCase().includes("availability") || msg.toLowerCase().includes("column") || msg.toLowerCase().includes("could not find")) {
+    // Retry with fewer columns if specific columns (availability/profile_completed) are missing
+    if (msg.toLowerCase().includes("availability") || msg.toLowerCase().includes("profile_completed") || msg.toLowerCase().includes("column") || msg.toLowerCase().includes("could not find")) {
       const retry = await supabase.from("profiles").select("id, name, role").eq("id", userId).single();
       data = retry.data as any;
       error = retry.error as any;
     }
   }
 
-  // Fetch authenticated user's email from auth service (not from profiles table)
+  // Read email from auth user record (more authoritative)
   let authEmail: string | undefined = undefined;
   try {
     const { data: authData } = await supabase.auth.getUser();
     authEmail = authData?.user?.email ?? undefined;
   } catch (e) {
-    // ignore auth.getUser errors — we still proceed without email
     authEmail = undefined;
   }
 
@@ -126,19 +124,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const profile: User = {
       id: data.id,
-      name: data.name,
+      name: (data as any).full_name ?? data.name ?? null,
       role: roleVal,
-      availability: typeof data.availability === "boolean" ? data.availability : null,
+      availability: typeof (data as any).availability === "boolean" ? (data as any).availability : null,
       email: authEmail,
+      profile_completed: typeof (data as any).profile_completed === "boolean" ? (data as any).profile_completed : null,
     };
 
-    // Set profile in context. Do NOT redirect here — onboarding is handled after explicit login or in protected routes.
     setUser(profile);
   } else {
-    // Profile not found — do NOT create a profile here. Auth context is READ-ONLY.
-    // Set minimal local user state (do not set role=null) so UI can handle onboarding.
-    // Include the authenticated email if available so UIs can still show the user's email.
-    setUser({ id: userId, name: null, availability: null, email: authEmail });
+    // No profile row exists yet — set a minimal user and keep profile_completed false
+    setUser({ id: userId, name: null, availability: null, email: authEmail, profile_completed: false });
   }
   }
 

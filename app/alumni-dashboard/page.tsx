@@ -48,6 +48,7 @@ import {
   CheckCircle,
   MessageSquare,
 } from "lucide-react";
+import { MentorGuard } from "@/components/guards";
 
 /**
  * Message interface for incoming student requests
@@ -110,7 +111,7 @@ export default function AlumniDashboard() {
 
           out.push({
             id: last?.id ?? c.id,
-            studentName: student?.name ?? "Student",
+            studentName: (student as any)?.full_name ?? student?.name ?? "Student",
             studentEmail: "",
             message: last?.content ?? "",
             timestamp: last?.created_at ?? new Date().toISOString(),
@@ -135,23 +136,14 @@ export default function AlumniDashboard() {
    * Authentication and role check
    * Redirects non-alumni users to appropriate pages
    */
-  useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        router.push("/login");
-      } else if (user.role !== "mentor") {
-        // Students should go to find-mentors page
-        router.push("/find-mentors");
-      }
-    }
-  }, [user, isLoading, router]);
+  // Role enforcement moved to MentorGuard wrapper (prevents premature redirects)
+
 
   /**
    * Handle user logout
    */
   const handleLogout = async () => {
     await signOut();
-    router.push("/login");
   };
 
   /**
@@ -228,53 +220,10 @@ export default function AlumniDashboard() {
   const unreadCount = messages.filter(m => m.status === "unread").length;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card px-6 py-4">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-primary" />
-            <span className="text-lg font-semibold text-foreground">
-              AlumniConnect
-            </span>
-          </Link>
-
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
-                  {(user?.name ?? user?.email ?? "?").charAt(0).toUpperCase()}
-                </div>
-                <span className="hidden text-sm sm:inline">{user?.name ?? user?.email ?? ""}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>
-                <div className="flex flex-col">
-                  <span>{user?.name ?? user?.email ?? ""}</span>
-                  <span className="text-xs font-normal text-muted-foreground">
-                    {user?.email ?? ""}
-                  </span>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="capitalize">
-                <User className="mr-2 h-4 w-4" />
-                Role: Alumni
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="mx-auto max-w-6xl px-6 py-8">
+    <MentorGuard>
+      <div className="min-h-screen bg-background">
+        {/* Main Content */}
+        <main className="mx-auto max-w-6xl px-6 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground">
@@ -452,5 +401,6 @@ export default function AlumniDashboard() {
         </DialogContent>
       </Dialog>
     </div>
+    </MentorGuard>
   );
 }

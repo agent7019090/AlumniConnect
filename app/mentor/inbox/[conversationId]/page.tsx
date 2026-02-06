@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { MentorGuard } from "@/components/guards";
+import { Loader2 } from "lucide-react";
 
 export default function MentorConversation() {
   const params = useParams();
@@ -18,9 +20,7 @@ export default function MentorConversation() {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
 
-  useEffect(() => {
-    if (!isLoading && !user) router.push("/login");
-  }, [user, isLoading, router]);
+  // MentorGuard will handle redirects; no direct router pushes to login.
 
   useEffect(() => {
     if (!conversationId) return;
@@ -56,35 +56,38 @@ export default function MentorConversation() {
     fetchMessages();
   }
 
+  if (isLoading) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-3xl">
-        <h2 className="text-lg font-semibold">Conversation</h2>
+    <MentorGuard>
+      <div className="min-h-screen p-6">
+        <div className="max-w-3xl">
+          <h2 className="text-lg font-semibold">Conversation</h2>
 
-        <div className="mt-4 space-y-3">
-          {loading ? (
-            <div>Loading...</div>
-          ) : messages.length === 0 ? (
-            <div className="rounded-lg border border-border bg-card p-6">No messages yet</div>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((m) => (
-                <div key={m.id} className={`flex ${m.sender_role === "student" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[70%] rounded-lg p-3 ${m.sender_role === "student" ? "bg-emerald-600 text-white" : "bg-slate-700 text-white"}`}>
-                    <div className="text-sm">{m.content}</div>
-                    <div className="mt-1 text-xs text-white/70">{m.created_at ? new Date(m.created_at).toLocaleString() : ""}</div>
+          <div className="mt-4 space-y-3">
+            {loading ? (
+              <div>Loading...</div>
+            ) : messages.length === 0 ? (
+              <div className="rounded-lg border border-border bg-card p-6">No messages yet</div>
+            ) : (
+              <div className="space-y-3">
+                {messages.map((m) => (
+                  <div key={m.id} className={`flex ${m.sender_role === "student" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[70%] rounded-lg p-3 ${m.sender_role === "student" ? "bg-emerald-600 text-white" : "bg-slate-700 text-white"}`}>
+                      <div className="text-sm">{m.content}</div>
+                      <div className="mt-1 text-xs text-white/70">{m.created_at ? new Date(m.created_at).toLocaleString() : ""}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-        <div className="mt-6 flex gap-3">
-          <Textarea value={text} onChange={(e) => setText(e.target.value)} className="flex-1" rows={3} />
-          <Button onClick={sendMessage} disabled={sending || !text.trim()}>{sending ? "Sending..." : "Send"}</Button>
+          <div className="mt-6 flex gap-3">
+            <Textarea value={text} onChange={(e) => setText(e.target.value)} className="flex-1" rows={3} />
+            <Button onClick={sendMessage} disabled={sending || !text.trim()}>{sending ? "Sending..." : "Send"}</Button>
+          </div>
         </div>
       </div>
-    </div>
+    </MentorGuard>
   );
 }

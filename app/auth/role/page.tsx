@@ -31,8 +31,8 @@ export default function RoleSelectionPage() {
         return;
       }
 
-      // Upsert only id + role. Do NOT include availability here (optional column)
-      const { error } = await supabase.from("profiles").upsert({ id: userId, role });
+      // Upsert id + role and mark profile as incomplete so user is sent to setup
+      const { error } = await supabase.from("profiles").upsert({ id: userId, role, profile_completed: false }, { onConflict: "id" });
       if (error) {
         console.error("Profile upsert error:", error);
         // If the error is about the availability column, try a simpler upsert without that column (defensive)
@@ -50,12 +50,8 @@ export default function RoleSelectionPage() {
         }
       }
 
-      // Redirect only after successful insert/update
-      if (role === "student") {
-        await (router.replace("/student/dashboard") as unknown as Promise<void>);
-      } else {
-        await (router.replace("/mentor/dashboard") as unknown as Promise<void>);
-      }
+      // Send the user to the profile setup flow immediately after role selection
+      await (router.replace("/profile/setup") as unknown as Promise<void>);
     } finally {
       setLoading(false);
     }

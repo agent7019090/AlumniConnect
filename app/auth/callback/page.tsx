@@ -48,7 +48,7 @@ export default function AuthCallbackPage() {
         // Read profile (auth-client read only).
         const { data: profile, error: profileErr } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, profile_completed")
           .eq("id", userId)
           .single();
 
@@ -75,6 +75,12 @@ export default function AuthCallbackPage() {
 
         // Map legacy roles
         const role = profile?.role === "alumni" ? "mentor" : profile?.role;
+
+        // If profile exists but onboarding not completed, forward to profile setup
+        if (profile && profile.profile_completed === false) {
+          if (!didCancel) router.replace("/profile/setup");
+          return;
+        }
 
         if (!role) {
           // Only send to role selection when an explicit sign-in just occurred

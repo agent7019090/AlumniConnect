@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
+import Header from '@/components/header'
 import './globals.css'
 
 // Load Geist font family for modern typography
@@ -43,7 +44,14 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         {/* AuthProvider wraps the entire app for global auth state */}
         <AuthProvider>
-          {children}
+          {/* Top navigation header (student/mentor aware) */}
+          <div className="sticky top-0 z-40 bg-transparent">
+            <Header />
+          </div>
+
+          <main className="min-h-[calc(100vh-64px)]">
+            {children}
+          </main>
         </AuthProvider>
         <Analytics />
       </body>

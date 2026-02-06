@@ -65,6 +65,26 @@ export default function FindMentorsPage() {
    * - mentors: Array of mentor profiles fetched from Supabase
    * - loadingMentors: Loading state during profile fetch
    */
+
+  // This page is for students only — use effect-based redirects to avoid router changes during render
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      router.replace("/auth/login");
+      return;
+    }
+    if (user.role !== "student") {
+      router.replace("/mentor/dashboard");
+      return;
+    }
+  }, [isLoading, user, router]);
+
+  // While auth hydrates or redirect is pending, show loading
+  if (isLoading || !user || user.role !== "student") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+    );
+  }
   const [mentors, setMentors] = useState<Array<{
     id: string;
     name?: string | null;
@@ -199,20 +219,10 @@ export default function FindMentorsPage() {
     router.push(`/student/inbox/${(data as any).id}`);
   }
 
-  /**
-   * Authentication Check
-   * Redirects unauthenticated users to login page
-   * Pre-fills student name from user profile
-   */
+  // Pre-fill name from authenticated user (safe fallback if name is null)
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/login");
-    }
-    // Pre-fill name from authenticated user (safe fallback if name is null)
-    if (user && !studentName) {
-      setStudentName(user?.name ?? "");
-    }
-  }, [user, isLoading, router, studentName]);
+    if (user && !studentName) setStudentName(user?.name ?? "");
+  }, [user, studentName]);
 
   /**
    * Handle user logout
@@ -220,7 +230,6 @@ export default function FindMentorsPage() {
    */
   const handleLogout = async () => {
     await signOut();
-    router.push("/login");
   };
 
   // Show loading state while checking authentication
@@ -284,40 +293,7 @@ export default function FindMentorsPage() {
        * Contains all input fields and action buttons
        */}
       <div className="w-full bg-background lg:w-[45%]">
-        {/* Application Header with Logo and User Menu */}
-        <header className="border-b border-border px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo Section */}
-            <Link href="/" className="flex items-center gap-2">
-              {/* Logo Icon - Diamond shape representing connection */}
-              <svg
-                className="h-6 w-6 text-foreground"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 2L2 12l10 10 10-10L12 2z" />
-                <path d="M12 8v8" />
-                <path d="M8 12h8" />
-              </svg>
-              <span className="text-lg font-semibold text-foreground">
-                AlumniConnect
-              </span>
-            </Link>
-
-            {/* User Account Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
-                    {getAvatarInitial()}
-                  </div>
-                  <span className="hidden text-sm sm:inline">{user?.name ?? user?.email ?? ""}</span>
-                </Button>
-              </DropdownMenuTrigger>
+  
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuLabel>
                   <div className="flex flex-col">

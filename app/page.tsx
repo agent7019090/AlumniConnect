@@ -41,68 +41,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-background">
-      {/*
-       * Header Navigation
-       * Contains logo, app name, and auth buttons
-       * Consistent with the find-mentors page header
-       */}
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto max-w-6xl px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo Section */}
-            <div className="flex items-center gap-2">
-              {/* Logo Icon - Diamond shape for brand recognition */}
-              <svg
-                className="h-6 w-6 text-foreground"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 2L2 12l10 10 10-10L12 2z" />
-                <path d="M12 8v8" />
-                <path d="M8 12h8" />
-              </svg>
-              <span className="text-lg font-semibold text-foreground">
-                AlumniConnect
-              </span>
-            </div>
 
-            {/* Auth Buttons - Show login or user info */}
-            <div className="flex items-center gap-3">
-              {user ? (
-                /* Logged in - show user name and dashboard link */
-                <button onClick={() => {
-                  if (!user) { router.push('/auth/login'); return; }
-                  if (user.role === 'mentor') router.push('/mentor/dashboard');
-                  else if (user.role === 'student') router.push('/student/dashboard');
-                  else router.push('/auth/role');
-                }} className="flex items-center gap-2 bg-transparent border-0">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
-                    {avatarInitial}
-                  </div>
-                  <span className="hidden sm:inline">{user?.name ?? user?.email ?? ""}</span>
-                </button>
-              ) : (
-                /* Not logged in - show login and signup buttons */
-                <>
-                  <Link href="/login">
-                    <Button variant="ghost" className="text-muted-foreground">
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Login
-                    </Button>
-                  </Link>
-                  <Link href="/login">
-                    <Button>Sign Up</Button>
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/*
        * Hero Section

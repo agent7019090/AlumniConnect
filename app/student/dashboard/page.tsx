@@ -4,12 +4,17 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
+import MentorCard from "@/components/mentor-card";
 import { useRouter } from "next/navigation";
+import { StudentGuard } from "@/components/guards";
+import { Loader2 } from "lucide-react";
 
 interface Mentor {
   id: string;
   name: string | null;
   role: string | null;
+  current_company?: string | null;
+  skills?: string[] | null;
   availability?: boolean | null;
 }
 
@@ -29,9 +34,53 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(false);
 
   // Student filter UI
-  const [skills, setSkills] = useState("Java");
+  const [skills, setSkills] = useState("");
   const [targetRole, setTargetRole] = useState(TARGET_ROLES[0]);
   const [companyFilter, setCompanyFilter] = useState("");
+
+  // Hydrate persisted preferences
+  useEffect(() => {
+    try {
+      const key = `student_prefs_${user?.id ?? 'anon'}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const prefs = JSON.parse(raw);
+        if (prefs.skills) setSkills(prefs.skills.join(', '));
+        if (prefs.targetRole) setTargetRole(prefs.targetRole);
+        if (prefs.targetCompanies) setCompanyFilter(prefs.targetCompanies.join(', '));
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [user?.id]);
+
+  async function saveStudentProfile() {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const skillsArr = (skills || '').split(',').map(s => s.trim()).filter(Boolean);
+      const { error } = await supabase.from('profiles').upsert({
+        id: user.id,
+        full_name: user.name || null,
+        skills: skillsArr,
+        role: 'student',
+        target_role: targetRole || null,
+        target_companies: (companyFilter || '').split(',').map(s => s.trim()).filter(Boolean),
+        profile_completed: true
+      }, { onConflict: 'id' });
+      if (error) {
+        alert(error.message);
+        return;
+      }
+      // persist preferences client-side
+      const key = `student_prefs_${user.id}`;
+      const prefs = { skills: skillsArr, targetRole, targetCompanies: (companyFilter || '').split(',').map(s => s.trim()).filter(Boolean) };
+      localStorage.setItem(key, JSON.stringify(prefs));
+      alert('Profile saved');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const computeMatchScore = (mentor: any) => {
     const studentSkills = (skills || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
@@ -39,43 +88,28 @@ export default function StudentDashboard() {
     const skillOverlap = studentSkills.reduce((acc, s) => acc + (mentorSkills.includes(s) ? 1 : 0), 0);
 
     const studentCompanies = (companyFilter || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-    const companyMatch = mentor.company ? studentCompanies.includes(String(mentor.company).toLowerCase()) : false;
+    const companyMatch = mentor.current_company ? studentCompanies.includes(String(mentor.current_company).toLowerCase()) : false;
 
-    const roleMatch = mentor.title ? String(mentor.title).toLowerCase() === String(targetRole || "").toLowerCase() : (mentor.role ? String(mentor.role).toLowerCase() === String(targetRole || "").toLowerCase() : false);
+    const roleMatch = mentor.role ? String(mentor.role).toLowerCase() === String(targetRole || "").toLowerCase() : false;
 
     const score = skillOverlap * 2 + (companyMatch ? 5 : 0) + (roleMatch ? 3 : 0);
     return score;
   };
 
   useEffect(() => {
-    // Ensure Supabase session exists first, then proceed
+    // Fetch mentors only when a student user is present
     let mounted = true;
+
     async function init() {
-      const { data } = await supabase.auth.getSession();
-
-      if (!data?.session) {
-        // If we've finished loading auth and no session, redirect to login
-        if (!isLoading) router.push("/auth/login");
-        return;
-      }
-
-      // Prevent mentors from using student dashboard
-      if (user && user.role && user.role !== "student") {
-        if (!isLoading) router.push("/mentor/dashboard");
-        return;
-      }
-
-      // If auth context hasn't populated user yet, wait until it does
       if (!user?.id) return;
+      if (user.role !== "student") return;
 
       await fetchMentors();
     }
 
     init();
-    return () => {
-      mounted = false;
-    };
-  }, [user, isLoading, router]);
+    return () => { mounted = false; };
+  }, [user]);
 
   async function fetchMentors() {
     if (!user?.id) return;
@@ -84,23 +118,33 @@ export default function StudentDashboard() {
     try {
       let { data, error } = await supabase
         .from("profiles")
-        .select("id, name, role, availability")
-        .eq("role", "mentor");
+        .select("id, full_name, name, role, current_company, skills, availability")
+        .eq("role", "mentor")
+        .eq("availability", true);
 
       // If availability column doesn't exist, retry without it
       if (error) {
         const msg = (error as any).message || "";
         if (msg.toLowerCase().includes("availability") || msg.toLowerCase().includes("column") || msg.toLowerCase().includes("could not find")) {
-          const res = await supabase.from("profiles").select("id, name, role").eq("role", "mentor");
+          const res = await supabase.from("profiles").select("id, full_name, name, role, current_company, skills").eq("role", "mentor");
           data = res.data as any;
-          // ignore res.error here and treat mentors as available by default
         } else {
           console.error(error);
           return;
         }
       }
 
-      setMentors((data as Mentor[]) || []);
+      // Normalize mentor fields
+      const normalized = (data || []).map((m: any) => ({
+        id: m.id,
+        name: m.full_name ?? m.name ?? null,
+        role: m.role ?? null,
+        current_company: m.current_company ?? null,
+        skills: Array.isArray(m.skills) ? m.skills : (m.skills ? [m.skills] : []),
+        availability: typeof m.availability === "boolean" ? m.availability : true,
+      }));
+
+      setMentors(normalized as Mentor[]);
     } finally {
       setLoading(false);
     }
@@ -150,62 +194,99 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen p-6">
-      <h1 className="text-2xl font-semibold">Find Mentors</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Message available mentors to start a conversation</p>
+    <StudentGuard>
+      <div className="min-h-screen p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-semibold">Student Dashboard</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Match with alumni and start conversations</p>
+          </div>
 
-      {/* Filter Controls */}
-      <div className="mt-4 mb-6 flex flex-wrap gap-3">
-        <input value={skills} onChange={(e) => setSkills(e.target.value)} className="rounded border px-3 py-2" placeholder="Skills (comma-separated)" />
-        <select value={targetRole} onChange={(e) => setTargetRole(e.target.value)} className="rounded border px-3 py-2">
-          {TARGET_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-        </select>
-        <input value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="rounded border px-3 py-2" placeholder="Companies (comma-separated)" />
-        <Button onClick={() => {
-          // apply client-side scoring on currently loaded mentors
-          setMentors(prev => prev.map(m => ({ ...m, matchScore: computeMatchScore(m) })).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)));
-        }}>Filter</Button>
-      </div>
+          <div className="mt-6 grid grid-cols-12 gap-6">
+            {/* LEFT COLUMN - Student Profile Card */}
+            <div className="col-span-4">
+              <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+                <h3 className="text-lg font-semibold">Student Profile</h3>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {loading ? (
-          <div>Loading mentors...</div>
-        ) : mentors.length === 0 ? (
-          <div className="rounded-lg border border-border bg-card p-6 text-center">No mentors available yet</div>
-        ) : (
-          mentors.map((m) => {
-            const available = typeof m.availability === "boolean" ? m.availability : true;
-            return (
-              <div key={m.id} className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center justify-between">
+                <div className="mt-4 space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium">{m.name || "Mentor"}</h3>
-                    <p className="text-xs text-muted-foreground">{m.title || m.role}</p>
-                    {m.company && <p className="text-xs text-muted-foreground">{m.company}</p>}
+                    <label className="text-sm font-medium">Student Name</label>
+                    <input value={user?.name ?? ""} readOnly className="mt-1 block w-full rounded-md border px-3 py-2 bg-transparent" placeholder="Your name" />
                   </div>
-                  <div>
-                    {available ? (
-                      <span className="rounded-full bg-emerald-500/20 px-2 py-1 text-xs text-emerald-400">Available</span>
-                    ) : (
-                      <span className="rounded-full bg-slate-600/20 px-2 py-1 text-xs text-muted-foreground">Unavailable</span>
-                    )}
-                  </div>
-                </div>
 
-                <div className="mt-4">
-                  <Button
-                    onClick={() => messageMentor(m.id)}
-                    disabled={available === false}
-                    className="w-full"
-                  >
-                    {available ? "Message Mentor" : "Currently Unavailable"}
-                  </Button>
+                  <div>
+                    <label className="text-sm font-medium">Skills</label>
+                    <input value={skills} onChange={(e) => setSkills(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="e.g. java, sql, react" />
+                    <p className="mt-1 text-xs text-muted-foreground">Comma-separated skills used for matching</p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Target Role</label>
+                    <select value={targetRole} onChange={(e) => setTargetRole(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2">
+                      {TARGET_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Target Companies</label>
+                    <input value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="e.g. Google, Meta" />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Button onClick={() => {
+                      // apply client-side scoring and sort
+                      setMentors(prev => prev.map(m => ({ ...m, matchScore: computeMatchScore(m) })).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)));
+                    }} className="flex-1">Match with Alumni</Button>
+
+                    <Button variant="outline" onClick={() => {
+                      setSkills("");
+                      setTargetRole(TARGET_ROLES[0]);
+                      setCompanyFilter("");
+                    }}>Reset</Button>
+                  </div>
+
+                  <div className="mt-3 flex justify-end">
+                    <Button onClick={saveStudentProfile} disabled={loading}>{loading ? 'Saving...' : 'Save Profile'}</Button>
+                  </div>
+
+                  <div className="mt-4 rounded-md border border-border bg-secondary p-3">
+                    <div className="text-sm font-medium">Match Scoring</div>
+                    <ul className="mt-2 text-sm text-muted-foreground space-y-1">
+                      <li>Skill overlap: <strong>x2</strong></li>
+                      <li>Role alignment: <strong>x3</strong></li>
+                      <li>Company match: <strong>x5</strong></li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-            );
-          })
-        )}
+            </div>
+
+            {/* RIGHT COLUMN - AI Matched Alumni */}
+            <div className="col-span-8">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">AI Matched Alumni</h2>
+                <div className="text-sm text-muted-foreground">Showing mentors from database</div>
+              </div>
+
+              <div className="mt-4 results-panel">
+                {loading ? (
+                  <div className="text-center text-white">Loading mentors...</div>
+                ) : mentors.length === 0 ? (
+                  <div className="rounded-lg border border-border bg-card p-6 text-center">No mentors available yet</div>
+                ) : (
+                  <div className="mentor-grid">
+                    {mentors.map((m) => (
+                      <div key={m.id}>
+                        <MentorCard mentor={m} matchScore={computeMatchScore(m)} onMessage={messageMentor} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </StudentGuard>
   );
 }
