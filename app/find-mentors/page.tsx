@@ -293,31 +293,6 @@ export default function FindMentorsPage() {
        * Contains all input fields and action buttons
        */}
       <div className="w-full bg-background lg:w-[45%]">
-  
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col">
-                    <span>{user?.name ?? user?.email ?? ""}</span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {user?.email ?? ""}
-                    </span>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="capitalize">
-                  <User className="mr-2 h-4 w-4" />
-                  Role: {user.role}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
-
         {/* Main Form Container */}
         <div className="p-6 lg:p-8">
           {/* Form Card with Subtle Border */}
