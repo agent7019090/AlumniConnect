@@ -60,7 +60,7 @@ export default function RoleSelectionPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-md p-8">
-        <h2 className="text-lg font-semibold">Welcome to AlumniConnect</h2>
+        <h2 className="text-lg font-semibold">Welcome to AlumniInReach</h2>
         <p className="mt-2 text-sm text-muted-foreground">Choose how you&apos;d like to use the platform</p>
 
         <div className="mt-6 flex gap-3">

@@ -1,7 +1,7 @@
 /**
  * Alumni Database Module
  * 
- * This module contains the mock alumni data for the AlumniConnect platform.
+ * This module contains the mock alumni data for the AlumniInReach platform.
  * In a production environment, this would be replaced with database queries.
  * 
  * Data Structure:

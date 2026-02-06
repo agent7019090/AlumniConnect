@@ -1,7 +1,7 @@
 /**
  * Find Mentors Page - Main Application Interface
  * 
- * This page implements the core functionality of AlumniConnect:
+ * This page implements the core functionality of AlumniInReach:
  * - Left panel: Student profile form for input collection
  * - Right panel: Matched alumni results with compatibility scores
  * 

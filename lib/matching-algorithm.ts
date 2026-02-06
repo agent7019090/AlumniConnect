@@ -1,7 +1,7 @@
 /**
  * Matching Algorithm Module
  * 
- * This module implements the core matching logic for the AlumniConnect platform.
+ * This module implements the core matching logic for the AlumniInReach platform.
  * It calculates compatibility scores between students and alumni based on
  * multiple weighted criteria.
  * 

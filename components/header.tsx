@@ -27,7 +27,7 @@ export default function Header() {
         <div className="flex items-center gap-3">
           <button onClick={onLogoClick} className="flex items-center gap-3 text-lg font-semibold bg-transparent border-0">
             <div className="h-8 w-8 rounded-md bg-gradient-to-br from-emerald-400 to-blue-500 shadow-md flex items-center justify-center text-white">AC</div>
-            <span className="hidden sm:inline">AlumniConnect</span>
+            <span className="hidden sm:inline">AlumniInReach</span>
           </button>
         </div>
 

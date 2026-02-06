@@ -12,7 +12,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 // SEO metadata for the application
 export const metadata: Metadata = {
-  title: 'AlumniConnect - Student-Alumni Mentorship Platform',
+  title: 'AlumniInReach - Student-Alumni Mentorship Platform',
   description: 'Connect final-year students with alumni for placement guidance using smart matching based on skills, roles, and target companies.',
   icons: {
     icon: [

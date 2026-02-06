@@ -1,5 +1,5 @@
 /**
- * AlumniConnect - Home Page
+ * AlumniInReach - Home Page
  * 
  * Landing page for the Alumni-Student Mentorship Platform.
  * Introduces the platform's value proposition and guides users
@@ -231,7 +231,7 @@ export default function HomePage() {
       <footer className="border-t border-border bg-card py-8">
         <div className="mx-auto max-w-6xl px-6 text-center text-muted-foreground">
           <p>
-            AlumniConnect — Alumni-Student Mentorship & Placement Guidance
+            AlumniInReach — Alumni-Student Mentorship & Placement Guidance
             Platform
           </p>
         </div>

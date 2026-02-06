@@ -32,7 +32,7 @@ export default function AuthLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-md p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold">Sign in to AlumniConnect</h1>
+          <h1 className="text-2xl font-bold">Sign in to AlumniInReach</h1>
           <p className="mt-2 text-sm text-muted-foreground">Sign in with Google to continue</p>
         </div>
 

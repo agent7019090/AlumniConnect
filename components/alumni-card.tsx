@@ -278,7 +278,7 @@ export function AlumniCard({ result }: AlumniCardProps) {
                   </Label>
                   <Textarea
                     id="message"
-                    placeholder={`Hi ${alumni.name.split(" ")[0]}, I found your profile on AlumniConnect and would love to connect with you regarding placement preparation...`}
+                    placeholder={`Hi ${alumni.name.split(" ")[0]}, I found your profile on AlumniInReach and would love to connect with you regarding placement preparation...`}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     rows={4}
