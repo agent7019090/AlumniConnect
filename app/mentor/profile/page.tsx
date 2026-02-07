@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import MentorProfileForm from "@/components/mentor-profile-form";
+import AlumniProfileForm from "@/components/alumni-profile-form";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { MentorGuard } from "@/components/guards";
@@ -20,14 +20,9 @@ export default function MentorProfilePage() {
 
   return (
     <MentorGuard>
-      <div className="min-h-screen p-6">
-        <div className="max-w-3xl">
-          <h1 className="text-2xl font-semibold">Mentor Profile</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Manage your public mentorship profile</p>
-
-          <div className="mt-6">
-            <MentorProfileForm />
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10 py-8 px-6">
+        <div className="max-w-3xl mx-auto">
+          <AlumniProfileForm />
         </div>
       </div>
     </MentorGuard>

@@ -165,7 +165,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     // Clear local context state — auth session has been removed.
     setUser(null);
-    router.push("/");
   }
 
   return (

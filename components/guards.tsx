@@ -11,26 +11,32 @@ export function StudentGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isLoading) return;
+
     if (!user) {
-      router.replace("/auth/login");
+      router.replace("/");
       return;
     }
+
     if (user.role !== "student") {
       router.replace("/mentor/dashboard");
       return;
     }
-    // If profile isn't completed, send to setup
+
     if (user.profile_completed === false) {
       router.replace("/profile/setup");
       return;
     }
   }, [user, isLoading, router]);
 
-  if (isLoading) return (
-    <div className="flex min-h-[300px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-  );
-  if (!user) return null;
-  if (user.role !== "student") return null;
+  // 🔑 ALWAYS render something
+  if (isLoading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }
 
@@ -40,24 +46,30 @@ export function MentorGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isLoading) return;
+
     if (!user) {
-      router.replace("/auth/login");
+      router.replace("/");
       return;
     }
+
     if (user.role !== "mentor") {
       router.replace("/student/dashboard");
       return;
     }
+
     if (user.profile_completed === false) {
       router.replace("/profile/setup");
       return;
     }
   }, [user, isLoading, router]);
 
-  if (isLoading) return (
-    <div className="flex min-h-[300px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-  );
-  if (!user) return null;
-  if (user.role !== "mentor") return null;
+  if (isLoading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }

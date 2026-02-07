@@ -21,6 +21,7 @@
  * Prioritizes readability and clean data entry experience
  */
 :root {
+  --brand-gradient: linear-gradient(135deg, #34d399 0%, #3b82f6 100%);
   /* Background colors - light gray base */
   --background: oklch(0.97 0.005 260);
   --foreground: oklch(0.15 0.02 260);
@@ -85,6 +86,7 @@
  * Deep navy creates contrast and highlights the matched results
  */
 .dark {
+  --brand-gradient: linear-gradient(135deg, #34d399 0%, #3b82f6 100%);
   /* Background - deep navy blue */
   --background: oklch(0.18 0.025 260);
   --foreground: oklch(0.95 0 0);
@@ -234,5 +236,9 @@
 
 .header-float {
   backdrop-filter: blur(6px);
+}
+
+.brand-gradient {
+  background: var(--brand-gradient);
 }
 

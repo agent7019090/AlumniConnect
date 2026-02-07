@@ -24,7 +24,7 @@ export default function ConversationPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -37,26 +37,31 @@ export default function ConversationPage() {
   }, [conversationId]);
 
   async function fetchMessages() {
+  setLoading(true);
+  try {
     if (!conversationId) {
       console.error("fetchMessages: missing conversationId");
+      setMessages([]);
       return;
     }
 
-    setLoading(true);
     const { data, error } = await supabase
       .from("messages")
       .select("id, sender_id, sender_role, content, created_at")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true });
 
-    setLoading(false);
-    if (error) {
-      console.error("fetchMessages error:", error?.message ?? error);
-      return;
-    }
+    if (error) throw error;
 
     setMessages((data as Message[]) || []);
+  } catch (e) {
+    console.error("fetchMessages error:", e);
+    setMessages([]);
+  } finally {
+    setLoading(false); // ← THIS is what fixes the stuck state
   }
+}
+
 
   async function sendMessage() {
     if (!user || !text.trim()) return;

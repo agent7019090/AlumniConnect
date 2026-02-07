@@ -21,7 +21,7 @@ export default function StudentInboxPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) fetchConversations();
@@ -67,77 +67,49 @@ export default function StudentInboxPage() {
   );
 
   async function fetchConversations() {
-    setLoading(true);
+  setLoading(true);
+  try {
     const { data: convs, error } = await supabase
       .from("conversations")
       .select("id, mentor_id")
       .eq("student_id", user!.id)
       .order("updated_at", { ascending: false });
 
-    if (error) {
-      console.error(error);
-      setLoading(false);
-      return;
-    }
+    if (error) throw error;
 
     const items: ConversationItem[] = [];
 
     for (const c of convs || []) {
-      const { data: mentor } = await supabase.from("profiles").select("full_name, name").eq("id", c.mentor_id).single();
-      const { data: last } = await supabase
+      const { data: mentor } = await supabase
+        .from("profiles")
+        .select("full_name, name")
+        .eq("id", c.mentor_id)
+        .single();
+
+      const { data: lastArr } = await supabase
         .from("messages")
         .select("content, sender_role")
         .eq("conversation_id", c.id)
         .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
+
+      const last = lastArr?.[0];
 
       items.push({
         id: c.id,
         mentor_id: c.mentor_id,
-        mentor_name: mentor?.name || "Mentor",
+        mentor_name: mentor?.full_name || mentor?.name || "Mentor",
         last_message: last?.content || "",
-        last_sender_role: last?.sender_role || undefined,
+        last_sender_role: last?.sender_role,
       });
     }
 
     setConversations(items);
+  } catch (e) {
+    console.error(e);
+    setConversations([]);
+  } finally {
     setLoading(false);
   }
-
-  return (
-    <div className="min-h-screen p-6">
-      <h1 className="text-2xl font-semibold">Inbox</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Your active conversations</p>
-
-      <div className="mt-6 space-y-3">
-        {loading ? (
-          <div>Loading...</div>
-        ) : conversations.length === 0 ? (
-          <div className="rounded-lg border border-border bg-card p-6 text-center">No conversations yet</div>
-        ) : (
-          conversations.map((c) => (
-            <div key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-              <div>
-                <div className="font-medium">{c.mentor_name}</div>
-                <div className="mt-1 text-sm text-muted-foreground">{c.last_message}</div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="text-xs">
-                  {c.last_sender_role === "student" ? (
-                    <span className="rounded-full bg-amber-500/10 px-2 py-1 text-amber-400">Pending</span>
-                  ) : (
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-emerald-400">Replied</span>
-                  )}
-                </div>
-
-                <Button onClick={() => router.push(`/student/inbox/${c.id}`)} size="sm">Open</Button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
+}
 }

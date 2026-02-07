@@ -21,12 +21,26 @@ export default function Header() {
     else router.push("/student/dashboard");
   };
 
+  const handleSignOut = () => {
+  setTimeout(async () => {
+    try {
+      await signOut();          // Supabase logout
+      router.replace("/");      // leave guarded routes
+      router.refresh();         // flush App Router cache
+    } catch (err) {
+      console.error("Sign out failed", err);
+    }
+  }, 0);
+};
+
+
+
   return (
     <header className="w-full border-b border-border bg-transparent px-6 py-4 backdrop-blur-sm header-float">
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={onLogoClick} className="flex items-center gap-3 text-lg font-semibold bg-transparent border-0">
-            <div className="h-8 w-8 rounded-md bg-gradient-to-br from-emerald-400 to-blue-500 shadow-md flex items-center justify-center text-white">AC</div>
+            <div className="h-8 w-8 rounded-md brand-gradient shadow-md flex items-center justify-center text-white font-bold">AR</div>
             <span className="hidden sm:inline">AlumniInReach</span>
           </button>
         </div>
@@ -61,7 +75,9 @@ export default function Header() {
                   {user.role === "student" && <DropdownMenuItem onClick={() => router.push("/student/dashboard")}>Student Dashboard</DropdownMenuItem>}
                   {user.role === "mentor" && <DropdownMenuItem onClick={() => router.push("/mentor/dashboard")}>Mentor Dashboard</DropdownMenuItem>}
                   <DropdownMenuItem onClick={() => router.push("/profile/setup")}>Settings</DropdownMenuItem>
-                  <DropdownMenuItem onClick={async () => { await signOut(); }}>Sign Out</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    Sign Out
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

@@ -5,106 +5,205 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import MentorProfileForm from "@/components/mentor-profile-form";
 import { MentorGuard } from "@/components/guards";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageSquare, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function MentorDashboard() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const [availability, setAvailability] = useState<boolean>(true);
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
-    if (user) fetchProfileAndConversations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  if (!user) return;
 
-  async function fetchProfileAndConversations() {
-    const { data, error } = await supabase.from("profiles").select("availability").eq("id", user!.id).single();
-    if (!error && data) setAvailability(typeof data.availability === "boolean" ? data.availability : true);
+  const loadProfile = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("full_name, job_title, current_company, skills, availability")
+      .eq("id", user.id)
+      .single();
 
-    setLoading(true);
-    const { data: convs, error: convErr } = await supabase.from("conversations").select("id, student_id, updated_at").eq("mentor_id", user!.id).order("updated_at", { ascending: false });
-    setLoading(false);
-
-    if (convErr) {
-      console.error(convErr);
+    if (
+      error ||
+      !data ||
+      !data.job_title ||
+      !data.skills?.length
+    ) {
+      router.push("/profile/setup");
       return;
     }
 
-    // Fetch student names for each conversation
-    const items: any[] = [];
-    for (const c of convs || []) {
-      const { data: student } = await supabase.from("profiles").select("full_name, name").eq("id", c.student_id).single();
-      // Fetch last message
-      const { data: last } = await supabase.from("messages").select("content, sender_role").eq("conversation_id", c.id).order("created_at", { ascending: false }).limit(1).single();
+    setProfile(data);
+    await fetchProfileAndConversations();
+  };
 
-      items.push({ id: c.id, studentName: (student as any)?.full_name ?? student?.name ?? "Student", lastMessage: last?.content || "", lastSenderRole: last?.sender_role });
-    }
+  loadProfile();
+}, [user]);
 
-    setConversations(items);
+
+  async function fetchProfileAndConversations() {
+  setLoading(true);
+
+  const { data: convs, error: convErr } = await supabase
+    .from("conversations")
+    .select("id, student_id, updated_at")
+    .eq("mentor_id", user!.id)
+    .order("updated_at", { ascending: false });
+
+  if (convErr) {
+    console.error(convErr);
+    setLoading(false);
+    return;
   }
 
-  async function toggleAvailability(next: boolean) {
-    if (!user?.id) return;
-    // Optimistic update
-    const prev = availability;
-    setAvailability(next);
+  const items: any[] = [];
 
-    // Use upsert to guard against missing profile rows
-    const { error } = await supabase.from("profiles").upsert({ id: user.id, availability: next }, { onConflict: "id" });
-    if (error) {
-      alert(error.message);
-      setAvailability(prev);
-    }
+  for (const c of convs || []) {
+    // 🔹 get last message
+    const { data: lastArr } = await supabase
+      .from("messages")
+      .select("content, sender_role")
+      .eq("conversation_id", c.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    // 🚨 KEY FIX: skip conversations with no messages
+    if (!lastArr || lastArr.length === 0) continue;
+
+    const last = lastArr[0];
+
+    const { data: student } = await supabase
+      .from("profiles")
+      .select("full_name, name")
+      .eq("id", c.student_id)
+      .single();
+
+    items.push({
+      id: c.id,
+      studentName:
+        student?.full_name ?? student?.name ?? "Student",
+      lastMessage: last.content,
+      lastSenderRole: last.sender_role,
+    });
   }
+
+  setConversations(items);
+  setLoading(false);
+}
+
+
 
   if (isLoading) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  if (!profile) {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
   return (
     <MentorGuard>
-      <div className="min-h-screen p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10 py-8 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold">Mentor Dashboard</h1>
-            <p className="mt-1 text-sm text-muted-foreground">See students who messaged you and manage your profile</p>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/75 bg-clip-text text-transparent">Alumni Dashboard</h1>
+            <p className="mt-2 text-base text-muted-foreground">Manage your mentorship profile and connect with students</p>
           </div>
 
-          <div className="mt-6 grid grid-cols-12 gap-6">
-            <div className="col-span-4">
-              <h3 className="text-lg font-semibold">Mentor Profile</h3>
-              <div className="mt-4">
-                <MentorProfileForm />
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* LEFT COLUMN - Alumni Profile */}
+            <div className="lg:col-span-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Your Profile</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p><strong>Name:</strong> {profile?.full_name}</p>
+                  <p><strong>Role:</strong> {profile?.job_title}</p>
+                  <p><strong>Company:</strong> {profile?.current_company}</p>
+                  <p><strong>Skills:</strong> {profile?.skills?.join(", ")}</p>
+
+                  <p className="flex items-center gap-2">
+                    <strong>Status:</strong>
+                    <span className={profile?.availability ? "text-green-600" : "text-muted-foreground"}>
+                      {profile?.availability ? "Available" : "Unavailable"}
+                    </span>
+                  </p>
+
+                  <Button
+                    variant="outline"
+                    className="mt-2 w-full"
+                    onClick={() => router.push("/profile/setup")}
+                  >
+                    Edit Profile
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
 
-            <div className="col-span-8">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Students Who Messaged You</h2>
-              </div>
-
-              <div className="mt-4 space-y-3">
-                {loading ? (
-                  <div>Loading...</div>
-                ) : conversations.length === 0 ? (
-                  <div className="rounded-lg border border-border bg-card p-6">No conversations yet</div>
-                ) : (
-                  conversations.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-                      <div>
-                        <div className="font-medium">{c.studentName}</div>
-                        <div className="mt-1 text-sm text-muted-foreground">{c.lastMessage}</div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <Button onClick={() => router.push(`/mentor/inbox/${c.id}`)} size="sm">Open</Button>
-                      </div>
+            {/* RIGHT COLUMN - Conversations */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Messages Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                    Student Messages
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
-                  ))
-                )}
-              </div>
+                  ) : conversations.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground space-y-2">
+                      {!profile?.availability ? (
+                        <>
+                          <p>You’re currently unavailable for mentoring</p>
+                          <p className="text-sm">
+                            Enable availability to start receiving mentee requests
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p>No student messages yet</p>
+                          <p className="text-sm">
+                            Students will be able to message you now that you're available
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+
+                    <div className="space-y-2">
+                      {conversations.map((c) => (
+                        <div
+                          key={c.id}
+                          onClick={() => router.push(`/mentor/inbox/${c.id}`)}
+                          className="flex cursor-pointer items-start justify-between rounded-lg border border-border bg-card/50 p-4 hover:bg-card/80 transition-colors"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{c.studentName}</div>
+                            <div className="mt-1 text-sm text-muted-foreground truncate">{c.lastMessage || "No messages yet"}</div>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/mentor/inbox/${c.id}`);
+                          }}>
+                            Reply
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -112,3 +211,4 @@ export default function MentorDashboard() {
     </MentorGuard>
   );
 }
+
